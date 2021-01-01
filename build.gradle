@@ -1,0 +1,50 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '2.4.1'
+    id 'com.github.node-gradle.node' version '2.2.4'
+}
+
+group 'org.example'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'java-library'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+
+dependencies {
+    implementation('org.springframework.boot:spring-boot-starter-webflux')
+    implementation('org.projectlombok:lombok')
+    annotationProcessor('org.projectlombok:lombok')
+}
+
+task adminNpmInstall(type: NpmTask) {
+    workingDir = file("src/main/front/")
+    args = ['install']
+}
+
+task npmBuild(type: NpmTask, dependsOn: adminNpmInstall) {
+    workingDir = file("src/main/front/")
+    args = ['run', 'build']
+}
+
+
+task staticResourcesSync(type: Sync, dependsOn: npmBuild) {
+    from 'src/main/front/build'
+    into 'src/main/resources/static'
+}
+
+compileJava.dependsOn staticResourcesSync
+
+task staticResourcesSyncForDeploy(type: Sync) {
+    from 'src/main/front/build'
+    into 'build/resources/main/static'
+}
+
+bootJar {
+    archiveFileName = "mayaul-admin.jar"
+    dependsOn 'staticResourcesSyncForDeploy'
+}
